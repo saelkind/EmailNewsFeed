@@ -13,6 +13,6 @@ Objects:
             sender_account_file
             sender_account_connection
             open_email_connection
-            process_subscripriont(subscription)
+            process_subscription(subscription)
             get_news(subject)
             send_email(subscriber, news_list)
