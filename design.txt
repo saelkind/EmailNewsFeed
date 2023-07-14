@@ -1,0 +1,18 @@
+Title: Email News Feed
+
+Description: on a scheduled basis, automatically email news article links to subscribers, based on their interests.  For now, very basic.  Subscriber names and emails, along with a list of their subjects, is stored in an Excel spreadsheet.
+
+Objects:
+        Subscriptions
+            subscriptions_list
+            excel_file_name
+            load_subscriptions()
+            process_subscriptionss()
+
+        NewsSender
+            sender_account_file
+            sender_account_connection
+            open_email_connection
+            process_subscripriont(subscription)
+            get_news(subject)
+            send_email(subscriber, news_list)
