@@ -9,10 +9,22 @@ Objects:
             load_subscriptions()
             process_subscriptionss()
 
+        Susbcription
+            firstname = None
+            lastname = None
+            email_address
+            subscription_list
+
         NewsSender
             sender_account_file
             sender_account_connection
             open_email_connection
             process_subscription(subscription)
             get_news(subject)
-            send_email(subscriber, news_list)
+            build_email(subscriber, newslist)
+            send_email(email)
+
+        Email
+            to_addr
+            from_addr
+            body
