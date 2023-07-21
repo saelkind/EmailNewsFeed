@@ -6,8 +6,9 @@ class Subscription:
     topics of interest
     '''
 
-    def __init__(self, subscription_rec: []):
-        self.firstname = None
-        self.lastname = None
-        self.email_address = None
-        self.subscription_list: () = None
+    # def __init__(self, subscription_rec: []):
+    def __init__(self):
+        self.firstname: str = None
+        self.lastname: str = None
+        self.email_address: str = None
+        self.subscription_list: list = None

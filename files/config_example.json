@@ -1,0 +1,11 @@
+{
+  "email_account": "joe.blow@gmail.com",
+  "email_pwd":  "Unguessable_Password123",
+  "news_api_key": "XYZZY",
+  "max_articles_per_topic": 10,
+  "max_topics_per_subscription": 5,
+  "_comment_": "sort_order choices are relevancy, popularity, publishedAt",
+  "sort_order": "relevancy",
+  "email_timeout_ms": 10000,
+  "debug": "false"
+}
