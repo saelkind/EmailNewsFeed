@@ -15,7 +15,7 @@ class EmailContent:
                 "table {margin-right:40px; margin-left:40px}</style></head>\n"
     CLOSING_BOILERPLATE = \
         "<p>That's it for today!  We'll be back tomorrow with " \
-        "more headlines for you.  if you liked this, please" \
+        "more headlines for you.  if you liked this, please " \
         "let us know by emailing the editors.</p><br/><p>Regards,</p><p>Marvin" \
         '<img src=' \
         '"https://icons.iconarchive.com/icons/sykonist/looney-tunes/256/Marvin-Martian-icon.png"' \
