@@ -2,8 +2,7 @@ from news_sender import NewsSender
 from subscription import Subscription
 import pandas as pd
 import numpy as np
-# import openpyxl
-# import xlrd
+import logging
 
 
 class Subscriptions:
@@ -21,7 +20,7 @@ class Subscriptions:
             email address
             comma-separated list of topics
     Name and location of the Excel spreadsheet file are a configuration parameter
-    in config.json
+    in config.json2
     '''
 
     IDX_FIRSTNAME = 0
@@ -43,27 +42,32 @@ class Subscriptions:
         pd.set_option('display.width', None)
         self.subscriptions_array = None
         self.data_columns_names: list[str] = None
+        self.logger = logging.getLogger(NewsSender.LOGGER_NAME)
         self.load_subscriptions()
 
     def load_subscriptions(self):
         ''' Load the subscriptions from the configured Excel file into
         a member array for processing
         '''
-        subscriptions_df = pd.read_excel(self.newssender.subscriptions_excel_file)
-        # TODO debug test & print() - replace with logger.debug
+        try:
+            subscriptions_df = pd.read_excel(self.newssender.subscriptions_excel_file)
+        except Exception as ex:
+            self.logger.critical(f"Error loading in the subscriptions from file "
+                  f"{self.newssender.subscriptions_excel_file}: {ex}")
+            exit(1)
         self.data_columns_names = list(subscriptions_df.columns)
         self.subscriptions_array = np.array(subscriptions_df)
         if self.newssender.debug:
-            print("DataFrame:\n", subscriptions_df)
-            print("\nArray:\n", self.subscriptions_array)
-            print("\n\nColumn names:\n", self.data_columns_names)
+            self.logger.debug(f"DataFrame: {subscriptions_df}")
+            self.logger.debug(f"Array:{self.subscriptions_array}")
+            self.logger.debug(f"Column names: {self.data_columns_names}")
         # TODO: workaround to iteration antipattern with Pandas DataFrames. Need
         #  to refactor this if subscriber list gets "large".
         # TODO: Ardit used for index, row in iterrows(df).  I should try that
         #   just to have the practice
         for subscription_row in self.subscriptions_array:
             topics_list = subscription_row[Subscriptions.IDX_TOPIC_LIST].split(",")
-            print(topics_list)
+            # print(topics_list)
             for i in range(0, len(topics_list) - 1):
                 topics_list[i] = topics_list[i].strip()
                 topics_list[i].replace(" ", "+")
@@ -92,13 +96,16 @@ class Subscriptions:
             topic_processed += stats["topics_retrieved"]
             articles_retrieved += stats["articles_retrieved"]
         total_stats = {
-            "subscriptions_processed_ok": subscriptions_processed_ok,
-            "topics_requested": topics_requested,
-            "topic_processed": topic_processed,
-            "articles_retrieved": articles_retrieved
+            "subscrip_found:": len(self.subscriptions_array),
+            "subscrip_proc_ok": subscriptions_processed_ok,
+            "topics_req": topics_requested,
+            "topic_proc": topic_processed,
+            "articles_retr": articles_retrieved
         }
-        # TODO: replace print() with logger.info()
-        print("Final stats over all subscriptions: \n", total_stats)
+        self.newssender.close_connection()
+        self.logger.info("Email connection closed")
+        self.logger.info(f"Final stats : {total_stats}")
+        self.logger.info("<<<<<<<< Exiting after processing complete")
 
 
 if __name__ == "__main__":

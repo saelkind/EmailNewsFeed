@@ -1,6 +1,6 @@
 from subscription import Subscription
 from news_sender import NewsSender
-import os
+import logging
 
 
 class EmailContent:
@@ -31,6 +31,7 @@ class EmailContent:
         self.body: str = EmailContent.BODY_HEAD
         self.retrieved_articles = None
         self.newssender = newssender
+        # self.logger = logging.getLogger(NewsSender.LOGGER_NAME)
 
     def build_email_content(self, retrieved_articles: dict):
         self.retrieved_articles = retrieved_articles

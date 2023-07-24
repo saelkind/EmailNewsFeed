@@ -10,25 +10,6 @@
   "sort_order": "relevancy",
   "email_timeout_ms": 10000,
   "subscriptions_excel_file": "files/subscriptions.xlsx",
+  "logfile": "output_files/NewsSender.log",
   "debug": "false"
 }
-
-
-
-if '__name__' == 'main':
-    email_sender = EmailSender()
-    email_sender_acct = input("sender email account: ")
-    email_pwd = input("sender account password: ")
-    print(f"Acct: {email_sender_acct}, pwd: {email_pwd}")
-    if input("Is this correct (y or n)? ") != "y":
-        print("OK, exiting")
-        exit(0)
-    msg_body_html = "<html><body><h1>Hi there!</h1><p>Hi how are <b>you</b>?</p></body></html>"
-    # msg_body_html = "<h1>Hi there!</h1><p>Hi how are <b>you</b>?</p>"
-    email_sender.connect_sender(email_sender_acct, email_pwd)
-    email_sender.send_html_email("Test", msg_body_html, "erissaclouds@gmail.com", ["saelkind@gmail.com"])
-    time.sleep(60)
-    email_sender.send_html_email("Test #2 BOTH", msg_body_html, "erissaclouds@gmail.com",
-                                 ["saelkind@gmail.com", "selkind@aol.com"])
-    time.sleep(60)
-    email_sender.send_html_email("Test #3 AOL", msg_body_html, "no-reply@gmail.com", ["selkind@aol.com"])

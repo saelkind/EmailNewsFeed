@@ -1,6 +1,6 @@
 from news_sender import NewsSender
 import requests
-
+import logging
 
 class Subscription:
     """
@@ -28,6 +28,7 @@ class Subscription:
             config params
         :return: list with email sent OK, error msg if not, topics requested, topics processed, articles retrieved
         """
+        logger = logging.getLogger(NewsSender.LOGGER_NAME)
         firstname: str = this_subs_rec[Subscription.IDX_FIRSTNAME]
         lastname: str = this_subs_rec[Subscription.IDX_LASTNAME]
         email_address: str = this_subs_rec[Subscription.IDX_EMAIL]
@@ -50,10 +51,9 @@ class Subscription:
         status_list = newssender.send_html_email("Your daily NewsFeed",
                                                  email_content.body,
                                                  [this_subs_rec[Subscription.IDX_EMAIL]])
-        # TODO replace print() with logger.info()
-        print(f"done with subscription for {email_address}:"
-              f" {topics_done} completed out of {topics_requested} requested;"
-              f" {articles_retrieved} total articles retrieved")
+        logger.info(f"{email_address}: done processing subscription")
+        logger.info(f"{email_address}: {topics_done} completed out of {topics_requested} requested; "
+                    f"{articles_retrieved} total articles retrieved")
         return {"email_sent": status_list[0],
                 "error_msg": status_list[1],
                 "topics_requested": topics_requested,
@@ -71,6 +71,7 @@ class Subscription:
         :return: dict with two n-v pairs - topic name & list of relevant articles
         """
         # news.org free license only permits news that's >= 24 hours old
+        logger = logging.getLogger(NewsSender.LOGGER_NAME)
         sort_by = f"&sortBy={newssender.sort_order}"
         search_in = f"&searchin=description"
         url = f"{Subscription.NEWS_API_BASE_URL}?q={topic}"
@@ -82,11 +83,8 @@ class Subscription:
         articles = response.json()
         articles_avail = articles["totalResults"]
         articles_retr = len(articles["articles"])
-        # TODO replace print statement with logger.info()
-        if newssender.debug:
-            print(f"\n\nrequest for topic \"{topic}\":\nstatus: {response.status_code}\n"
+        logger.debug(f"Request for topic \"{topic}\":\nstatus: {response.status_code}, "
                   f"total articles found: {articles_avail}\narticles retrieved: {articles_retr}")
-        # TODO put logger in here
         return {"topic": f"{topic}", "articles": articles["articles"]}
 
 

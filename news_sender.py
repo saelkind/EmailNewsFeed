@@ -3,6 +3,8 @@ import smtplib
 from email.message import EmailMessage
 from datetime import date, timedelta
 import time
+import logging
+from logging.handlers import RotatingFileHandler
 
 
 class NewsSender:
@@ -20,17 +22,17 @@ class NewsSender:
     CONFIG_KEYWORDS: dict = {"email_account", "email_pwd", "news_api_key",
                             "max_articles_per_topic", "max_topics_per_subscription",
                             "sort_order", "email_timeout_ms",
-                            "subscriptions_excel_file", "debug"}
+                            "subscriptions_excel_file", "logfile", "debug"}
     SORT_KEYWORDS = {"relevancy", "popularity", "publishedAt"}
     IDX_STATUS = 0
     IDX_ERR_MSG = 2
     IDX_SUBJECTS_FOUND = 3
     IDX_TOT_SENT = 4
     DEBUG = True
+    LOGGER_NAME = "logger"
 
     # TODO: Would be nice to refactor to have a NewsFeedConfig class.  However,
     #  would have to work at not exposing password in memory
-    # TODO: Replace print() statements with logger.error()
 
     def __init__(self):
         # Load in the config from the JSON format config file
@@ -45,6 +47,8 @@ class NewsSender:
         self.sort_order: str = ""
         self.subscriptions_excel_file = ""
         self.config: dict = self.load_config_and_connect()
+        self.logfile: str = ""
+        self.logger: logging.Logger = None
         # for news searches.  free use of API only works for news 1 day old or older
         yesterday = date.today() - timedelta(days=1)
         self.date_str = yesterday.strftime("%Y-%m-%d")
@@ -60,14 +64,21 @@ class NewsSender:
         try:
             file = open(NewsSender.CONFIG_FILENAME, "r")
             config_data = json.load(file)
-        except Exception as e:
-            print("Error opening config file, will exit:", e)
+        except Exception as ex:
+            # since don't have config info (and log file name/path) yet
+            # will just do a print()
+            logging.critical(f"Config file issue: {ex}, will exit")
             exit(1)
         # Check the config keys for sanity
         config_keys_found = config_data.keys()
         config_keys_needed = NewsSender.CONFIG_KEYWORDS
         missing_keys = []
         extra_keys = []
+        # doing this early so can use logging from now on
+        if "logfile" in config_keys_found:
+            self.logfile = config_data["logfile"]
+            self.start_logging(self.logfile)
+        self.logger.info(">>>>>> Starting up EmailNewsFeed app")
         for key in config_keys_found:
             if key not in config_keys_needed and key != "_comment_":
                 extra_keys.append(key)
@@ -75,11 +86,10 @@ class NewsSender:
             if key not in config_keys_found:
                 missing_keys.append(key)
         if len(extra_keys) != 0:
-            print("Warning, extra config parameters found and ignored:")
-            print("\t", extra_keys)
+            self.logger.warning(f"extra config parameters found and ignored: {extra_keys}")
         if len(missing_keys) != 0:
-            print("Error: missing required config parameter(s), exiting:")
-            print("\t", missing_keys)
+            self.logger.critical(f"Missing required config parameter(s), exiting. "
+                          f"Missing keys: {missing_keys}")
             exit(1)
         self.sender_account = config_data["email_account"]
         sender_pwd = config_data["email_pwd"]
@@ -89,15 +99,35 @@ class NewsSender:
         # TODO: use the timeout in the smtp API calls
         self.email_timeout_sec: float = config_data["email_timeout_ms"] / 1000.0
         self.debug = config_data["debug"].strip().upper() == "TRUE"
+        if self.debug:
+            self.logger.setLevel(logging.DEBUG)
         self.sort_order = config_data["sort_order"]
         self.subscriptions_excel_file = config_data["subscriptions_excel_file"]
         if self.sort_order not in NewsSender.SORT_KEYWORDS:
-            print(f"Error in config: sort_order not a valid value: {self.sort_order}"
-                  f", exiting")
-            exit(1)
+            self.logger.error(f"Error in config: sort_order not a valid value:"
+                         f" {self.sort_order}, will assume 'relevancy'")
+            self.sort_order = "relevancy"
         # have to put this here if I don't want pwd to be persistent in memory
         self.sender_account_connection = self.connect_sender(sender_pwd)
         return config_data
+
+    def start_logging(self, logfilename: str):
+        # check file appendable first
+        try:
+            f = open(logfilename, "a")
+            f.close()
+        except Exception as ex:
+            # yup, will have to do this to stdout
+            logging.critical(f"Could not open logfile {logfilename}, "
+                             f"exception {ex}, will exit")
+            exit(1)
+        self.logger = logging.getLogger(NewsSender.LOGGER_NAME)
+        self.logger.setLevel(logging.INFO)
+        handler = RotatingFileHandler(filename=logfilename, mode="a",
+                                      maxBytes=500000, backupCount=4)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     def connect_sender(self, pwd: str) -> smtplib.SMTP_SSL:
         """
@@ -111,14 +141,13 @@ class NewsSender:
         # using the smptlib to deal with it directory.
         # TODO: Look into which API yagmail uses - he didn't set up a google dev
         #  account and get an API key, probably smtplib.
-        # TODO: replace print() statements with logger.error or logger.info as
-        #  appropriate
         smtp_server: smtplib.SMTP_SSL = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         try:
             connect_resp = smtp_server.login(user=self.sender_account, password=pwd)
-            print("connected, value returned: ", connect_resp)
+            self.logger.info(f"connected, value returned: {connect_resp}")
         except smtplib.SMTPException as smtpe:
-            print("Exception trying to login: ", smtpe)
+            self.logger.critical(f"Exception trying to login to email:"
+                                 f" {smtpe}, will exit")
         return smtp_server
 
     def send_html_email(self, subject: str, html_body:str, recipients: list[str]) -> (bool, str):
@@ -141,10 +170,9 @@ class NewsSender:
         # print("msg.as_string()", msg.as_string())
         try:
             send_resp = self.sender_account_connection.send_message(msg)
-            # print(send_resp)
         except smtplib.SMTPException as smtpe:
-            print("Got exception sending email: ", smtpe)
-            return (False, smtpe)
+            self.logger.error(f"Got exception sending email: {smtpe}")
+            return False, smtpe
         # print(f"Message subject {subject} sent!")
         return True, "no error"
 
