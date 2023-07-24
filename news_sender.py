@@ -58,7 +58,8 @@ class NewsSender:
         Read the config file for the app.   Contains email acct info,
         apinews.org API key, max topics per subscription and mas headlines
         retrieved per topic, and the order of preference for selecting
-        each top article list to send.  Sets all of the app config members.
+        each top article list to send.  Sets all the app config members,
+        and starts the logging framework
         :return: dictionary with the loaded config
         """
         try:
@@ -69,16 +70,29 @@ class NewsSender:
             # will just do a print()
             logging.critical(f"Config file issue: {ex}, will exit")
             exit(1)
-        # Check the config keys for sanity
         config_keys_found = config_data.keys()
-        config_keys_needed = NewsSender.CONFIG_KEYWORDS
-        missing_keys = []
-        extra_keys = []
-        # doing this early so can use logging from now on
         if "logfile" in config_keys_found:
             self.logfile = config_data["logfile"]
             self.start_logging(self.logfile)
         self.logger.info(">>>>>> Starting up EmailNewsFeed app")
+        sender_pwd = self.check_config_params(config_data, config_keys_found)
+        self.sender_account_connection = self.connect_sender(sender_pwd)
+        return config_data
+
+    def check_config_params(self, config_data, config_keys_found) -> str:
+        """
+        Validate the config params retrieved from the config file.
+        :param config_data: Dict with the JSON data from the config file
+        :param config_keys_found: List of the keys found in the config (already
+           extracted for checking for logfile name
+        :return: the email password, as don't want it local only (not
+           persistent in memory)
+        """
+
+        config_keys_needed = NewsSender.CONFIG_KEYWORDS
+        missing_keys = []
+        extra_keys = []
+        # doing this early so can use logging from now on
         for key in config_keys_found:
             if key not in config_keys_needed and key != "_comment_":
                 extra_keys.append(key)
@@ -89,7 +103,7 @@ class NewsSender:
             self.logger.warning(f"extra config parameters found and ignored: {extra_keys}")
         if len(missing_keys) != 0:
             self.logger.critical(f"Missing required config parameter(s), exiting. "
-                          f"Missing keys: {missing_keys}")
+                                 f"Missing keys: {missing_keys}")
             exit(1)
         self.sender_account = config_data["email_account"]
         sender_pwd = config_data["email_pwd"]
@@ -105,11 +119,9 @@ class NewsSender:
         self.subscriptions_excel_file = config_data["subscriptions_excel_file"]
         if self.sort_order not in NewsSender.SORT_KEYWORDS:
             self.logger.error(f"Error in config: sort_order not a valid value:"
-                         f" {self.sort_order}, will assume 'relevancy'")
+                              f" {self.sort_order}, will assume 'relevancy'")
             self.sort_order = "relevancy"
-        # have to put this here if I don't want pwd to be persistent in memory
-        self.sender_account_connection = self.connect_sender(sender_pwd)
-        return config_data
+        return sender_pwd
 
     def start_logging(self, logfilename: str):
         # check file appendable first
