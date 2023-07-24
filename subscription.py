@@ -36,7 +36,9 @@ class Subscription:
         topics_requested = len(subscription_list)
         articles_retrieved, topics_done, topics_retrieved = \
             cls.process_topics(newssender, subscription_list)
-        # Hack alert!!!!! circular reference avoidance
+        # Hack alert!!!!! circular reference avoidance by
+        # importing it inline here.  Gotta love just-in-time
+        # compilation
         from email_content import EmailContent
         email_content = EmailContent(this_subs_rec, newssender)
         email_content.build_email_content(topics_retrieved)
