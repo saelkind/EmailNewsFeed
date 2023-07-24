@@ -59,7 +59,8 @@ class Subscriptions:
             print("\n\nColumn names:\n", self.data_columns_names)
         # TODO: workaround to iteration antipattern with Pandas DataFrames. Need
         #  to refactor this if subscriber list gets "large".
-        # use transform to numpy array
+        # TODO: Ardit used for index, row in iterrows(df).  I should try that
+        #   just to have the practice
         for subscription_row in self.subscriptions_array:
             topics_list = subscription_row[Subscriptions.IDX_TOPIC_LIST].split(",")
             print(topics_list)
